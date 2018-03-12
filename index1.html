@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Chat</title>
+	<link rel="stylesheet" type="text/css" href="/css/main.css">
+</head>
+<body>
+	<div class="chat">
+		<input type="text" class="chat-name" placeholder="Enter your name">
+		<div class="chat-messages">
+			
+		</div>
+
+		<div id="textarea">
+			<div>
+				<textarea cols="30" rows="2"  placeholder="Type your message"></textarea>
+			</div>
+			<div>
+				<button>Reply</button>
+			</div>
+			<!-- <input type="submit" name="Reply"> -->
+		</div>
+
+		<div class="chat-status">Status: <span>Idle</span></div>
+		
+	</div>
+
+	<script type="text/javascript" src="http://127.0.0.1:8080/socket.io/socket.io.js"></script>
+
+	<script >
+		(function(){
+			 var getNode = function(s){
+			 	return document.querySelector(s);
+			 },
+
+			 //Getting the required Nodes from the DOM
+			  textarea = getNode('.chat textarea'),
+			  chat = getNode('.chat-messages'),
+			  chatName = getNode('.chat-name'),
+			  status = getNode('.chat-status span'),
+			  btn = getNode('#textarea button'),
+
+			  //Setting the Default Status text from the span in the DOM
+			  statusDefault = status.textContent,
+
+			  //Changing the Status of the Client in the span and also control its behaivor
+			  setStatus = function(s){
+			  	status.textContent = s;
+
+			  	//Changes back to the default state in 2 secs
+			  	if (s !== statusDefault){
+			  		var delay = setTimeout(function(){
+			  			setStatus(statusDefault);
+			  			clearInterval(delay);
+			  		}, 2000);
+			  	}
+			  };
+
+			  
+
+
+
+			  //Ensure we are connected to the socket
+			  try{
+			  		var socket = io.connect('http://127.0.0.1:8080');
+			  } catch(e) {
+			  	//Watch for errors
+			  }
+
+
+			  //Different operations when the socket is active
+			  if(socket !== undefined){
+
+
+
+			  	//Listen for output messages from the server.js file
+			  	socket.on('output', function(data){
+			  		console.log(data);
+			  		if (data.length) {
+
+			  			//Loop through results
+			  			for ( var x = 0; x < data.length; x = x+1){
+			  				var message = document.createElement('div');
+			  				message.setAttribute('class','chat-message');
+			  				message.textContent = data[x].name + ": "+data[x].message;
+
+			  				//console.log(message.textContent);
+
+			  				//Append the results to the existing framework
+			  				chat.appendChild(message);
+			  				chat.insertBefore(message, chat.firstChild);
+
+			  			}
+			  		}
+			  	});
+
+			  	//Listen for a status from the server
+			  	socket.on('status', function(data){
+
+			  		//Validating the type of date and emits the message appropriately
+			  		setStatus((typeof data === 'object') ? data.message : data);
+
+			  		//Clearing the textarea 
+			  		if(data.clear === true){
+			  			textarea.value = "";
+			  		}
+
+			  	});
+
+			  	//Listen for Keydown
+			  	btn.addEventListener('click', function(event){
+			  		var message = textarea.value,
+			  			name = chatName.value;
+
+			  			socket.emit('input', {
+			  				name: name,
+			  				message: message
+			  			});
+
+			  			event.preventDefault();
+			  	});
+			  }
+
+		})();
+	</script>
+</body>
+</html>
